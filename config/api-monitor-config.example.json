@@ -1,0 +1,72 @@
+{
+  "environment": "PROD",
+  "inventory": {
+    "inventoryPageUrl": "https://your-inventory-page.example.com/inventory",
+    "extractMode": "fetch",
+    "linkSelector": "a[href]",
+    "urlPattern": "/api/|apigee|nvd",
+    "timeoutMs": 30000,
+    "storageStatePath": ""
+  },
+  "staticApis": [
+    {
+      "name": "availabilitySummary",
+      "url": "https://example.com/api/availabilitySummary"
+    },
+    {
+      "name": "topApplications",
+      "url": "https://example.com/api/topApplications"
+    },
+    {
+      "name": "scheduledMaintenanceSummary",
+      "url": "https://example.com/api/scheduledMaintenanceSummary"
+    }
+  ],
+  "apiCheck": {
+    "method": "GET",
+    "timeoutMs": 8000,
+    "slowThresholdMs": 5000,
+    "successStatusCodes": [200],
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "notifications": {
+    "notifyOnFirstRunDown": true,
+    "teamsWebhookUrl": "",
+    "email": {
+      "enabled": false,
+      "from": "alerts@company.com",
+      "recipients": [
+        "team@company.com"
+      ],
+      "subjectPrefix": "[PROD ALERT]"
+    },
+    "runSummary": {
+      "enabled": false,
+      "channels": [
+        "teams"
+      ],
+      "alwaysSend": false,
+      "onlyWhenDown": false,
+      "maxItems": 0
+    },
+    "bulkFailureAlert": {
+      "enabled": true,
+      "channels": [
+        "teams"
+      ],
+      "minDownCount": 21,
+      "maxItems": 0,
+      "repeatMinDownDelta": 5
+    }
+  },
+  "storage": {
+    "stateFile": "data/api-monitor-state.json",
+    "reportDir": "reports"
+  },
+  "execution": {
+    "failOnDown": false,
+    "failOnNotificationError": false
+  }
+}

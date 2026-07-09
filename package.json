@@ -1,0 +1,13 @@
+{
+  "name": "dashboard-alerts-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Inventory API monitoring with Teams and email alerts",
+  "main": "src/api-inventory-monitor.js",
+  "scripts": {
+    "monitor:run": "node src/api-inventory-monitor.js --config config/api-monitor-config.json"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}

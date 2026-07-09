@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>API Monitor Dashboard</title>
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 24px; color: #1f2937; }
+    h1 { margin: 0 0 8px 0; }
+    .meta { margin-bottom: 16px; color: #4b5563; }
+    .cards { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; min-width: 150px; }
+    .value { font-size: 20px; font-weight: 700; }
+    .down { color: #b91c1c; }
+    .up { color: #047857; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; font-size: 13px; }
+    th { background: #f3f4f6; }
+  </style>
+</head>
+<body>
+  <h1>API Monitor Dashboard</h1>
+  <div class="meta">Environment: PROD | Checked At: 2026-07-09T10:48:44.466Z</div>
+  <div class="cards">
+    <div class="card"><div>Total APIs</div><div class="value">118</div></div>
+    <div class="card"><div>UP</div><div class="value up">91</div></div>
+    <div class="card"><div>DOWN</div><div class="value down">27</div></div>
+    <div class="card"><div>Avg Response (ms)</div><div class="value">2455</div></div>
+  </div>
+  <h2>Failed APIs (Status + Error Response)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>API</th>
+        <th>Status</th>
+        <th>Response Time (ms)</th>
+        <th>Error Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>customerLocationsAvailabilityMD</td>
+        <td>404</td>
+        <td>10067</td>
+        <td>HTTP 404</td>
+      </tr>
+<tr>
+        <td>customerLocationsScheduledMaintenanceInit</td>
+        <td>406</td>
+        <td>265</td>
+        <td>HTTP 406</td>
+      </tr>
+<tr>
+        <td>customerLocationsStatusSummary</td>
+        <td>N/A</td>
+        <td>15016</td>
+        <td>ERROR: page.goto: Timeout 15000ms exceeded.
+Call log:
+[2m  - navigating to &quot;https://inutilidcplp322.idc1.level3.com:8483/hapi/dashboard/v1/network/customer/customerLocationsStatusSummary?api.test&quot;, waiting until &quot;domcontentloaded&quot;[22m
+</td>
+      </tr>
+<tr>
+        <td>customerLocationsTcaInit</td>
+        <td>406</td>
+        <td>254</td>
+        <td>HTTP 406</td>
+      </tr>
+<tr>
+        <td>customerLocationsTroubleTicketsInit</td>
+        <td>406</td>
+        <td>272</td>
+        <td>HTTP 406</td>
+      </tr>
+<tr>
+        <td>availabilityByLocation</td>
+        <td>N/A</td>
+        <td>15019</td>
+        <td>ERROR: page.goto: Timeout 15000ms exceeded.
+Call log:
+[2m  - navigating to &quot;https://inutilidcplp322.idc1.level3.com:8483/hapi/dashboard/v1/network/performance/availabilityByLocation?api.test&quot;, waiting until &quot;domcontentloaded&quot;[22m
+</td>
+      </tr>
+<tr>
+        <td>city2CityHiperMetricsMesh</td>
+        <td>500</td>
+        <td>259</td>
+        <td>HTTP 500</td>
+      </tr>
+<tr>
+        <td>cityToCityList</td>
+        <td>400</td>
+        <td>257</td>
+        <td>HTTP 400</td>
+      </tr>
+<tr>
+        <td>activeMetricSummaryCE2CE</td>
+        <td>404</td>
+        <td>256</td>
+        <td>HTTP 404</td>
+      </tr>
+<tr>
+        <td>cvsConfigDiff</td>
+        <td>404</td>
+        <td>257</td>
+        <td>HTTP 404</td>
+      </tr>
+<tr>
+        <td>cvsConfigDownload</td>
+        <td>404</td>
+        <td>288</td>
+        <td>HTTP 404</td>
+      </tr>
+<tr>
+        <td>cvsConfigHistory</td>
+        <td>500</td>
+        <td>565</td>
+        <td>HTTP 500</td>
+      </tr>
+<tr>
+        <td>deepLinkGenerator</td>
+        <td>404</td>
+        <td>261</td>
+        <td>HTTP 404</td>
+      </tr>
+<tr>
+        <td>diagnosticsDispositionWave</td>
+        <td>400</td>
+        <td>257</td>
+        <td>HTTP 400</td>
+      </tr>
+<tr>
+        <td>codsDycapIndicator</td>
+        <td>N/A</td>
+        <td>15009</td>
+        <td>ERROR: page.goto: Timeout 15000ms exceeded.
+Call log:
+[2m  - navigating to &quot;https://inutilidcplp322.idc1.level3.com:8483/hapi/dashboard/v1/network/services/dycap/codsDycapIndicator?api.test&quot;, waiting until &quot;domcontentloaded&quot;[22m
+</td>
+      </tr>
+<tr>
+        <td>customerLocationsDynamicCapacity</td>
+        <td>404</td>
+        <td>259</td>
+        <td>HTTP 404</td>
+      </tr>
+<tr>
+        <td>dyCapBandwidthByCircuitTimeseries</td>
+        <td>N/A</td>
+        <td>15017</td>
+        <td>ERROR: page.goto: Timeout 15000ms exceeded.
+Call log:
+[2m  - navigating to &quot;https://inutilidcplp322.idc1.level3.com:8483/hapi/dashboard/v1/network/services/dycap/dyCapBandwidthByCircuitTimeseries?api.test&quot;, waiting until &quot;domcontentloaded&quot;[22m
+</td>
+      </tr>
+<tr>
+        <td>dyCapBandwidthCircuitJobs</td>
+        <td>500</td>
+        <td>262</td>
+        <td>HTTP 500</td>
+      </tr>
+<tr>
+        <td>dyCapBandwidthQuery</td>
+        <td>500</td>
+        <td>2989</td>
+        <td>HTTP 500</td>
+      </tr>
+<tr>
+        <td>dyCapBandwidthUpdate</td>
+        <td>400</td>
+        <td>264</td>
+        <td>HTTP 400</td>
+      </tr>
+<tr>
+        <td>dynamicCapacitySummary</td>
+        <td>N/A</td>
+        <td>15002</td>
+        <td>ERROR: page.goto: Timeout 15000ms exceeded.
+Call log:
+[2m  - navigating to &quot;https://inutilidcplp322.idc1.level3.com:8483/hapi/dashboard/v1/network/services/dycap/dynamicCapacitySummary?api.test&quot;, waiting until &quot;domcontentloaded&quot;[22m
+</td>
+      </tr>
+<tr>
+        <td>impactedTopology</td>
+        <td>N/A</td>
+        <td>15017</td>
+        <td>ERROR: page.goto: Timeout 15000ms exceeded.
+Call log:
+[2m  - navigating to &quot;https://inutilidcplp322.idc1.level3.com:8483/hapi/dashboard/v1/network/services/impactedTopology?api.test&quot;, waiting until &quot;domcontentloaded&quot;[22m
+</td>
+      </tr>
+<tr>
+        <td>threshold</td>
+        <td>400</td>
+        <td>266</td>
+        <td>HTTP 400</td>
+      </tr>
+<tr>
+        <td>thresholdAlerts</td>
+        <td>502</td>
+        <td>2993</td>
+        <td>HTTP 502</td>
+      </tr>
+<tr>
+        <td>thresholdCreate</td>
+        <td>502</td>
+        <td>2788</td>
+        <td>HTTP 502</td>
+      </tr>
+<tr>
+        <td>thresholdDelete</td>
+        <td>502</td>
+        <td>2847</td>
+        <td>HTTP 502</td>
+      </tr>
+<tr>
+        <td>thresholdModify</td>
+        <td>502</td>
+        <td>2805</td>
+        <td>HTTP 502</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>

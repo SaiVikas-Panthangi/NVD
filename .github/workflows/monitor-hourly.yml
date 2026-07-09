@@ -1,0 +1,60 @@
+name: Dashboard Alerts Hourly Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs hourly from 09:00 IST to 23:00 IST (GitHub schedule is UTC).
+    - cron: '30 3-17 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard-alerts-hourly-monitor
+  cancel-in-progress: false
+
+jobs:
+  run-monitor:
+    # Use a self-hosted runner that can reach your internal APIs.
+    runs-on: self-hosted
+    timeout-minutes: 55
+    env:
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Validate required secret
+        shell: bash
+        run: |
+          if [ -z "$TEAMS_WEBHOOK_URL" ]; then
+            echo "Missing required secret: TEAMS_WEBHOOK_URL"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browser
+        run: npx playwright install chromium
+
+      - name: Run monitor
+        run: npm run monitor:run
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitor-reports
+          path: |
+            reports/**
+            data/**
+            logs/**
+          if-no-files-found: warn
