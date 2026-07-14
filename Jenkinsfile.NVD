@@ -1,0 +1,301 @@
+pipeline {
+  agent any
+
+  triggers {
+    // Daily at 08:00 UTC (13:30 IST)
+    cron('''TZ=UTC
+0 8 * * *''')
+    
+    // Also allow manual trigger
+    pollSCM('') // Manual trigger via UI
+  }
+
+  parameters {
+    choice(
+      name: 'ENVIRONMENT',
+      choices: ['staging', 'production'],
+      description: 'Target environment for tests'
+    )
+  }
+
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    disableConcurrentBuilds()
+    timestamps()
+  }
+
+  environment {
+    // Jenkins Credentials - configure these in Jenkins UI
+    CCMA_USERNAME = credentials('nvd-ccma-username')
+    CCMA_PASSWORD = credentials('nvd-ccma-password')
+    TEST_ENVIRONMENT_URL = credentials('nvd-test-environment-url')
+    TEAMS_WEBHOOK_URL = credentials('nvd-teams-webhook-url')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Validate Credentials') {
+      steps {
+        script {
+          echo "✅ Validating required credentials..."
+          if (!env.CCMA_USERNAME) {
+            error "❌ Missing credential: nvd-ccma-username"
+          }
+          if (!env.CCMA_PASSWORD) {
+            error "❌ Missing credential: nvd-ccma-password"
+          }
+          if (!env.TEST_ENVIRONMENT_URL) {
+            error "❌ Missing credential: nvd-test-environment-url"
+          }
+          echo "✅ All credentials configured"
+        }
+      }
+    }
+
+    stage('Setup Node.js') {
+      steps {
+        script {
+          echo "Setting up Node.js 20..."
+          if (isUnix()) {
+            sh 'node --version && npm --version'
+          } else {
+            bat 'node --version && npm --version'
+          }
+        }
+      }
+    }
+
+    stage('Install Dependencies') {
+      steps {
+        script {
+          echo "Installing dependencies..."
+          if (isUnix()) {
+            sh 'npm ci'
+          } else {
+            bat 'npm ci'
+          }
+        }
+      }
+    }
+
+    stage('Install Playwright Browsers') {
+      steps {
+        script {
+          echo "Installing Playwright chromium browser..."
+          if (isUnix()) {
+            sh 'npx playwright install --with-deps chromium'
+          } else {
+            bat 'npx playwright install --with-deps chromium'
+          }
+        }
+      }
+    }
+
+    stage('Run Playwright Tests') {
+      steps {
+        script {
+          echo "🧪 Running Playwright E2E Tests on ${params.ENVIRONMENT}..."
+          try {
+            if (isUnix()) {
+              sh '''
+                npm run test
+              '''
+            } else {
+              bat '''
+                npm run test
+              '''
+            }
+            env.TEST_STATUS = 'SUCCESS'
+          } catch (Exception e) {
+            env.TEST_STATUS = 'FAILED'
+            currentBuild.result = 'UNSTABLE'
+            echo "⚠️ Tests failed, continuing to collect artifacts..."
+          }
+        }
+      }
+    }
+
+    stage('Collect Test Reports') {
+      when {
+        always()
+      }
+      steps {
+        script {
+          echo "📊 Collecting test reports and artifacts..."
+          // Playwright HTML report
+          if (fileExists('playwright-report')) {
+            echo "✅ Found playwright-report/"
+          }
+          // Screenshots from failures
+          if (fileExists('screenshots')) {
+            echo "✅ Found screenshots/"
+          }
+          // Test results JSON
+          if (fileExists('test-results')) {
+            echo "✅ Found test-results/"
+          }
+        }
+      }
+    }
+
+    stage('Archive Artifacts') {
+      when {
+        always()
+      }
+      steps {
+        script {
+          echo "📦 Archiving test artifacts to Jenkins..."
+          archiveArtifacts(
+            artifacts: 'playwright-report/**, screenshots/**, test-results/**',
+            allowEmptyArchive: true,
+            fingerprint: true
+          )
+          
+          // Publish test results
+          junit(
+            testResults: 'test-results/**/*.xml',
+            allowEmptyResults: true,
+            keepLongStdio: true
+          )
+        }
+      }
+    }
+
+    stage('Send Teams Notification') {
+      when {
+        always()
+      }
+      steps {
+        script {
+          def testStatus = env.TEST_STATUS ?: 'UNKNOWN'
+          def buildStatus = currentBuild.result ?: 'SUCCESS'
+          def buildUrl = env.BUILD_URL
+          def buildNumber = env.BUILD_NUMBER
+          
+          // Determine color and icon
+          def color = (testStatus == 'SUCCESS' && buildStatus == 'SUCCESS') ? '28a745' : 'dc3545'
+          def icon = (testStatus == 'SUCCESS' && buildStatus == 'SUCCESS') ? '✅' : '❌'
+          def statusText = (testStatus == 'SUCCESS' && buildStatus == 'SUCCESS') ? 'PASSED' : 'FAILED'
+          
+          // Build Teams message
+          def message = """
+{
+  "type": "message",
+  "attachments": [
+    {
+      "contentType": "application/vnd.microsoft.card.adaptive",
+      "contentUrl": null,
+      "content": {
+        "\$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "type": "AdaptiveCard",
+        "version": "1.4",
+        "body": [
+          {
+            "type": "Container",
+            "style": "${(testStatus == 'SUCCESS' && buildStatus == 'SUCCESS') ? 'good' : 'attention'}",
+            "items": [
+              {
+                "type": "TextBlock",
+                "text": "${icon} NVD Playwright Tests ${statusText}",
+                "weight": "bolder",
+                "size": "large",
+                "color": "${(testStatus == 'SUCCESS' && buildStatus == 'SUCCESS') ? 'good' : 'attention'}"
+              },
+              {
+                "type": "TextBlock",
+                "text": "Build #${buildNumber}",
+                "isSubtle": true,
+                "spacing": "none"
+              },
+              {
+                "type": "TextBlock",
+                "text": "Environment: ${params.ENVIRONMENT}",
+                "isSubtle": true,
+                "spacing": "none"
+              },
+              {
+                "type": "TextBlock",
+                "text": "Status: ${testStatus}",
+                "isSubtle": true,
+                "spacing": "none"
+              }
+            ]
+          },
+          {
+            "type": "Container",
+            "items": [
+              {
+                "type": "FactSet",
+                "facts": [
+                  {
+                    "name": "Build Time:",
+                    "value": "\${now()}"
+                  },
+                  {
+                    "name": "Branch:",
+                    "value": "${env.GIT_BRANCH ?: 'N/A'}"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "type": "Action.OpenUrl",
+            "title": "View Build Details",
+            "url": "${buildUrl}"
+          },
+          {
+            "type": "Action.OpenUrl",
+            "title": "View Test Report",
+            "url": "${buildUrl}artifact/playwright-report/index.html"
+          }
+        ]
+      }
+    }
+  ]
+}
+          """
+          
+          echo "📢 Sending Teams notification..."
+          if (isUnix()) {
+            sh """
+              curl -X POST "${env.TEAMS_WEBHOOK_URL}" \
+                -H "Content-Type: application/json" \
+                -d '${message}' || echo "⚠️ Failed to send Teams notification"
+            """
+          } else {
+            powershell """
+              \$body = @'
+${message}
+'@
+              Invoke-WebRequest -Uri "${env.TEAMS_WEBHOOK_URL}" -Method Post -ContentType "application/json" -Body \$body -ErrorAction SilentlyContinue | Out-Null
+            """
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      script {
+        echo "🧹 Cleaning up..."
+        // Clean workspace if needed
+        deleteDir()
+      }
+    }
+    success {
+      echo "✅ Pipeline completed successfully"
+    }
+    failure {
+      echo "❌ Pipeline failed"
+    }
+  }
+}
