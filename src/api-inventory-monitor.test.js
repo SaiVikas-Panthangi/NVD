@@ -1,9 +1,14 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
 
 const {
+  parseArgs,
+  loadConfig,
   textOnly,
   isMatching,
   textMatchesFilter,
@@ -14,8 +19,133 @@ const {
   calculateTransitions,
   uptimeDuration,
   escapeHtml,
-  shouldSendRunSummary
+  shouldSendRunSummary,
+  buildRunSummary
 } = require('./api-inventory-monitor');
+
+describe('parseArgs', () => {
+  it('uses default config path when no --config flag is given', () => {
+    const args = parseArgs(['node', 'script.js']);
+    assert.ok(args.configPath.endsWith('api-monitor-config.json'), `Unexpected path: ${args.configPath}`);
+  });
+
+  it('resolves --config flag to an absolute path', () => {
+    const args = parseArgs(['node', 'script.js', '--config', '/tmp/my-config.json']);
+    assert.equal(args.configPath, '/tmp/my-config.json');
+  });
+
+  it('ignores --config flag with no following value', () => {
+    const defaultArgs = parseArgs(['node', 'script.js']);
+    const args = parseArgs(['node', 'script.js', '--config']);
+    assert.equal(args.configPath, defaultArgs.configPath);
+  });
+});
+
+describe('loadConfig', () => {
+  let tmpDir;
+  let configPath;
+
+  before(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nvd-test-'));
+    configPath = path.join(tmpDir, 'config', 'test-config.json');
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  });
+
+  after(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('throws when config file does not exist', () => {
+    assert.throws(
+      () => loadConfig('/nonexistent/path/config.json'),
+      /Config file not found/
+    );
+  });
+
+  it('loads and applies defaults from a minimal config file', () => {
+    fs.writeFileSync(configPath, JSON.stringify({ staticApis: [] }));
+    const config = loadConfig(configPath);
+    assert.equal(config.environment, 'PROD');
+    assert.equal(config.inventory.extractMode, 'fetch');
+    assert.equal(config.apiCheck.concurrency, 6);
+    assert.equal(config.notifications.transitionAlertsEnabled, true);
+    assert.equal(config.execution.failOnDown, false);
+  });
+
+  it('preserves custom values from the config file', () => {
+    fs.writeFileSync(configPath, JSON.stringify({
+      environment: 'staging',
+      staticApis: [{ name: 'MyAPI', url: 'https://example.com/api' }],
+      apiCheck: { timeoutMs: 5000 }
+    }));
+    const config = loadConfig(configPath);
+    assert.equal(config.environment, 'staging');
+    assert.equal(config.staticApis.length, 1);
+    assert.equal(config.apiCheck.timeoutMs, 5000);
+    assert.equal(config.apiCheck.concurrency, 6);
+  });
+
+  it('overrides teamsWebhookUrl from TEAMS_WEBHOOK_URL env variable', () => {
+    fs.writeFileSync(configPath, JSON.stringify({}));
+    const original = process.env.TEAMS_WEBHOOK_URL;
+    process.env.TEAMS_WEBHOOK_URL = 'https://hooks.example.com/webhook';
+    try {
+      const config = loadConfig(configPath);
+      assert.equal(config.notifications.teamsWebhookUrl, 'https://hooks.example.com/webhook');
+    } finally {
+      if (original === undefined) {
+        delete process.env.TEAMS_WEBHOOK_URL;
+      } else {
+        process.env.TEAMS_WEBHOOK_URL = original;
+      }
+    }
+  });
+});
+
+describe('buildRunSummary', () => {
+  const config = { environment: 'staging' };
+
+  it('extracts failed APIs from results', () => {
+    const summary = {
+      checkedAt: '2024-01-01T00:00:00Z',
+      total: 3,
+      up: 2,
+      down: 1,
+      averageResponseMs: 120,
+      results: [
+        { name: 'API-A', url: 'https://a.com', status: 'UP', statusCode: 200, responseTimeMs: 100, reason: 'OK' },
+        { name: 'API-B', url: 'https://b.com', status: 'DOWN', statusCode: 503, responseTimeMs: 200, reason: 'HTTP 503' },
+        { name: 'API-C', url: 'https://c.com', status: 'UP', statusCode: 200, responseTimeMs: 60, reason: 'OK' }
+      ]
+    };
+    const result = buildRunSummary(summary, config);
+    assert.equal(result.environment, 'staging');
+    assert.equal(result.total, 3);
+    assert.equal(result.up, 2);
+    assert.equal(result.down, 1);
+    assert.equal(result.failed.length, 1);
+    assert.equal(result.failed[0].name, 'API-B');
+    assert.equal(result.failed[0].url, 'https://b.com');
+    assert.equal(result.failed[0].statusCode, 503);
+    assert.equal(result.failed[0].reason, 'HTTP 503');
+  });
+
+  it('returns empty failed array when all APIs are up', () => {
+    const summary = {
+      checkedAt: '2024-01-01T00:00:00Z',
+      total: 2,
+      up: 2,
+      down: 0,
+      averageResponseMs: 80,
+      results: [
+        { name: 'API-A', url: 'https://a.com', status: 'UP', statusCode: 200, responseTimeMs: 80, reason: 'OK' },
+        { name: 'API-B', url: 'https://b.com', status: 'UP', statusCode: 200, responseTimeMs: 80, reason: 'OK' }
+      ]
+    };
+    const result = buildRunSummary(summary, config);
+    assert.equal(result.failed.length, 0);
+  });
+});
 
 describe('textOnly', () => {
   it('strips HTML tags', () => {
@@ -273,3 +403,4 @@ describe('shouldSendRunSummary', () => {
     assert.equal(result.reason, 'worsened');
   });
 });
+
