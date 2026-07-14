@@ -65,7 +65,7 @@ jobs:
         if: steps.check-secrets.outputs.has_secrets == 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Run tests
+      - name: Run unit tests
         run: npm run test
 
       - name: Run Playwright tests

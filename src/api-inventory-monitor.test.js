@@ -46,7 +46,7 @@ describe('loadConfig', () => {
   let configPath;
 
   before(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nvd-test-'));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'api-monitor-test-'));
     configPath = path.join(tmpDir, 'config', 'test-config.json');
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
   });
