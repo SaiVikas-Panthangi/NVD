@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  checks: write
 
 concurrency:
   group: playwright-tests-${{ github.ref }}
@@ -45,27 +46,31 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Validate required secrets
+      - name: Check required secrets
+        id: check-secrets
         shell: bash
         run: |
-          if [ -z "${{ secrets.CCMA_USERNAME }}" ]; then
-            echo "❌ Missing secret: CCMA_USERNAME"
-            exit 1
+          if [ -n "${{ secrets.CCMA_USERNAME }}" ] && [ -n "${{ secrets.CCMA_PASSWORD }}" ]; then
+            echo "✅ Required secrets configured"
+            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "⚠️  Warning: CCMA_USERNAME or CCMA_PASSWORD not configured - credential-dependent steps will be skipped"
+            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
           fi
-          if [ -z "${{ secrets.CCMA_PASSWORD }}" ]; then
-            echo "❌ Missing secret: CCMA_PASSWORD"
-            exit 1
-          fi
-          echo "✅ Required secrets configured"
 
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browsers
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright tests
+      - name: Run tests
         run: npm run test
+
+      - name: Run Playwright tests
+        if: steps.check-secrets.outputs.has_secrets == 'true'
+        run: npx playwright test
         env:
           CCMA_USERNAME: ${{ secrets.CCMA_USERNAME }}
           CCMA_PASSWORD: ${{ secrets.CCMA_PASSWORD }}
