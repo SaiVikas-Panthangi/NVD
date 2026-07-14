@@ -10,17 +10,10 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: dashboard-alerts-hourly-monitor
-  cancel-in-progress: true
-
 jobs:
   run-monitor:
     runs-on: ubuntu-latest
     timeout-minutes: 55
-    
-    env:
-      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
 
     steps:
       - name: Checkout
@@ -31,15 +24,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-
-      - name: Validate required secret
-        shell: bash
-        run: |
-          if [ -z "$TEAMS_WEBHOOK_URL" ]; then
-            echo "❌ Missing required secret: TEAMS_WEBHOOK_URL"
-            exit 1
-          fi
-          echo "✅ TEAMS_WEBHOOK_URL is configured"
 
       - name: Install dependencies
         run: npm install
@@ -61,96 +45,3 @@ jobs:
             logs/**
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Notify Teams on Success
-        if: success()
-        shell: bash
-        run: |
-          curl -X POST "$TEAMS_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "type": "message",
-              "attachments": [
-                {
-                  "contentType": "application/vnd.microsoft.card.adaptive",
-                  "contentUrl": null,
-                  "content": {
-                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                    "type": "AdaptiveCard",
-                    "version": "1.4",
-                    "body": [
-                      {
-                        "type": "Container",
-                        "style": "good",
-                        "items": [
-                          {
-                            "type": "TextBlock",
-                            "text": "✅ Dashboard Alerts Monitor SUCCESS",
-                            "weight": "bolder",
-                            "size": "large"
-                          },
-                          {
-                            "type": "TextBlock",
-                            "text": "Run #${{ github.run_number }}",
-                            "isSubtle": true,
-                            "spacing": "none"
-                          },
-                          {
-                            "type": "TextBlock",
-                            "text": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                            "isSubtle": true
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                }
-              ]
-            }' || echo "⚠️ Failed to send Teams notification"
-
-      - name: Notify Teams on Failure
-        if: failure()
-        shell: bash
-        run: |
-          curl -X POST "$TEAMS_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "type": "message",
-              "attachments": [
-                {
-                  "contentType": "application/vnd.microsoft.card.adaptive",
-                  "contentUrl": null,
-                  "content": {
-                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                    "type": "AdaptiveCard",
-                    "version": "1.4",
-                    "body": [
-                      {
-                        "type": "Container",
-                        "style": "attention",
-                        "items": [
-                          {
-                            "type": "TextBlock",
-                            "text": "❌ Dashboard Alerts Monitor FAILED",
-                            "weight": "bolder",
-                            "size": "large",
-                            "color": "attention"
-                          },
-                          {
-                            "type": "TextBlock",
-                            "text": "Run #${{ github.run_number }}",
-                            "isSubtle": true,
-                            "spacing": "none"
-                          },
-                          {
-                            "type": "TextBlock",
-                            "text": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                            "isSubtle": true
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                }
-              ]
-            }' || echo "⚠️ Failed to send Teams notification"
