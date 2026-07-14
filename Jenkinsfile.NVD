@@ -26,8 +26,6 @@ pipeline {
 
   environment {
     // Jenkins Credentials - configure these in Jenkins UI
-    CCMA_USERNAME = credentials('nvd-ccma-username')
-    CCMA_PASSWORD = credentials('nvd-ccma-password')
     TEST_ENVIRONMENT_URL = credentials('nvd-test-environment-url')
     TEAMS_WEBHOOK_URL = credentials('nvd-teams-webhook-url')
   }
@@ -43,14 +41,11 @@ pipeline {
       steps {
         script {
           echo "✅ Validating required credentials..."
-          if (!env.CCMA_USERNAME) {
-            error "❌ Missing credential: nvd-ccma-username"
-          }
-          if (!env.CCMA_PASSWORD) {
-            error "❌ Missing credential: nvd-ccma-password"
-          }
           if (!env.TEST_ENVIRONMENT_URL) {
             error "❌ Missing credential: nvd-test-environment-url"
+          }
+          if (!env.TEAMS_WEBHOOK_URL) {
+            error "❌ Missing credential: nvd-teams-webhook-url"
           }
           echo "✅ All credentials configured"
         }
