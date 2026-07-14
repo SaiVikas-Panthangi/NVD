@@ -17,7 +17,7 @@ concurrency:
 jobs:
   run-monitor:
     # Use a self-hosted runner that can reach your internal APIs.
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 55
     env:
       TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
